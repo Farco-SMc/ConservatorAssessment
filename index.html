@@ -920,12 +920,12 @@
 
 <script>
 // ========================== Apps Script API over fetch =====================
-const BASE_URL = 'https://script.google.com/a/macros/fineart-restoration.co.uk/s/AKfycbwBPils9yMe1ZrQFeEWXR2gqnsv9EMJNpIe44hUKZmd2Cwnx2eJ1EL650Edu0eh8p4w/exec';
+const BASE_URL = 'https://script.google.com/macros/s/AKfycbz2H-6WUppgRvQ7nOlGJrGwKZWqGXevC3uUboVlSEH29jDisqFZ_JixuKorDRvO8f6R/exec';
 
 async function apiCall(action, payload = {}) {
   const res = await fetch(BASE_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action, ...payload })
   });
   const json = await res.json();
@@ -1820,9 +1820,14 @@ async function ensureBatch(){
   const assessor=document.querySelector('input[name="assessor"]').value.trim();
   if(!client){showToast('Enter a client name.');throw new Error('no client');}
   if(!assessor){showToast('Enter an assessor name.');throw new Error('no assessor');}
-  const res = await apiNewBatch(client, assessor);
-  currentBatchId = res.batchId;
-  return currentBatchId;
+  try {
+    const res = await apiNewBatch(client, assessor);
+    currentBatchId = res.batchId;
+    return currentBatchId;
+  } catch (err) {
+    alert(err.message || err);
+    throw err;
+  }
 }
 function buildPayload(batchId){
   const get=n=>document.querySelector(`[name="${n}"]`);
@@ -1858,21 +1863,36 @@ function buildPayload(batchId){
     historicYes: histYes, historicNotes: histNotes, selections, incidentNotes, TreatmentTimeMinutes: minutes, TreatmentTimeUnit: unit, TreatmentTime: treatmentDisplay };
 }
 async function uploadQueuedPhotos(batchId,itemId){
-  if(!queuedPhotos.length) return;
-  const photos=queuedPhotos.splice(0);
-  const res = await apiSavePhotos(batchId, itemId, photos);
-  showToast(`Photos saved (${res.saved})`);
+  if (!queuedPhotos.length) return;
+  const photos = queuedPhotos.splice(0);
+  try {
+    const res = await apiSavePhotos(batchId, itemId, photos);
+    showToast(`Photos saved (${res.saved})`);
+  } catch (err) {
+    alert(err.message || err);
+    throw err;
+  }
 }
-document.getElementById('saveNext').addEventListener('click',async()=>{
-  try{
-    disableButtons(true);showBusy(true);
-    const b=await ensureBatch();const payload=buildPayload(b);
-    payload.otherNotes=(document.getElementById('otherNotes')?.value||'').trim();
-    google.script.run.withSuccessHandler(async(res)=>{
-      await uploadQueuedPhotos(b,res.itemId);showToast('Saved — next item ready');currentBatchId = null;
-      resetForNextItem(true);disableButtons(false);showBusy(false);
-    }).withFailureHandler(err=>{alert(err.message||err);disableButtons(false);showBusy(false);}).saveItem(payload);
-  }catch(e){disableButtons(false);showBusy(false);}
+document.getElementById('saveNext').addEventListener('click', async () => {
+  disableButtons(true);
+  showBusy(true);
+  try {
+    const b = await ensureBatch();
+    const payload = buildPayload(b);
+    payload.otherNotes = (document.getElementById('otherNotes')?.value || '').trim();
+    // Save the item via the API
+    const res = await apiSaveItem(payload);
+    // Upload any photos after the item has been saved
+    await uploadQueuedPhotos(b, res.itemId);
+    showToast('Saved — next item ready');
+    currentBatchId = null;
+    resetForNextItem(true);
+  } catch (e) {
+    alert(e.message || e);
+  } finally {
+    disableButtons(false);
+    showBusy(false);
+  }
 });
 
 /* Hide sticky bar when keyboard is open on mobile */
@@ -1889,5 +1909,6 @@ if ('visualViewport' in window){
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 
+<!-- Removed legacy/unnecessary camera modal initialization script -->
 </body>
 </html>
