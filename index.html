@@ -920,12 +920,12 @@
 
 <script>
 // ========================== Apps Script API over fetch =====================
-const BASE_URL = 'https://script.google.com/a/macros/fineart-restoration.co.uk/s/AKfycbyCe-vqX0H_3_Evrjmst3pg1tm1EUOnmYsBIaXRjuCdrCxTId2-RmPU4BTfwlG80XLi/exec';
+const BASE_URL = 'https://script.google.com/a/macros/fineart-restoration.co.uk/s/AKfycbwBPils9yMe1ZrQFeEWXR2gqnsv9EMJNpIe44hUKZmd2Cwnx2eJ1EL650Edu0eh8p4w/exec';
 
 async function apiCall(action, payload = {}) {
   const res = await fetch(BASE_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify({ action, ...payload })
   });
   const json = await res.json();
@@ -1820,9 +1820,9 @@ async function ensureBatch(){
   const assessor=document.querySelector('input[name="assessor"]').value.trim();
   if(!client){showToast('Enter a client name.');throw new Error('no client');}
   if(!assessor){showToast('Enter an assessor name.');throw new Error('no assessor');}
-  return new Promise((resolve,reject)=>{
-    google.script.run.withSuccessHandler(res=>{currentBatchId=res.batchId;resolve(currentBatchId);}).withFailureHandler(err=>{alert(err.message||err);reject(err);}).newBatch(client,assessor);
-  });
+  const res = await apiNewBatch(client, assessor);
+  currentBatchId = res.batchId;
+  return currentBatchId;
 }
 function buildPayload(batchId){
   const get=n=>document.querySelector(`[name="${n}"]`);
@@ -1860,9 +1860,8 @@ function buildPayload(batchId){
 async function uploadQueuedPhotos(batchId,itemId){
   if(!queuedPhotos.length) return;
   const photos=queuedPhotos.splice(0);
-  return new Promise((resolve,reject)=>{
-    google.script.run.withSuccessHandler(res=>{showToast(`Photos saved (${res.saved})`);resolve();}).withFailureHandler(err=>{alert(err.message||err);reject(err);}).savePhotosDataUrls(batchId,itemId,photos);
-  });
+  const res = await apiSavePhotos(batchId, itemId, photos);
+  showToast(`Photos saved (${res.saved})`);
 }
 document.getElementById('saveNext').addEventListener('click',async()=>{
   try{
@@ -1890,51 +1889,5 @@ if ('visualViewport' in window){
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 
-<script>
-document.addEventListener('DOMContentLoaded', function(){
-  const cameraModalEl = document.getElementById('cameraModal');
-  if (!cameraModalEl) return;
-  const captureBtn = document.getElementById('capture');
-  const video = document.getElementById('cam');
-  const canvas = document.getElementById('snap');let stream = null;">${d.label || 'Camera'}</option>`).join('');
-      if (selectedId) deviceSelect.value = selectedId;
-    } catch (e) { /* ignore */ }
-
-  async function startCamera(deviceId){
-    let constraints = { video: deviceId ? {deviceId: {exact: deviceId}} : { facingMode: { ideal: 'environment' } }, audio: false };
-    try{
-      stream = await navigator.mediaDevices.getUserMedia(constraints);
-    }catch(e){
-      // Fallback to any available camera
-      constraints = { video: true, audio: false };
-      stream = await navigator.mediaDevices.getUserMedia(constraints);
-    }
-    stream = await navigator.mediaDevices.getUserMedia(constraints);
-    video.srcObject = stream;
-    await video.play();}
-  function stopCamera(){
-    if (stream){ stream.getTracks().forEach(t => t.stop()); stream = null; }
-    video.srcObject = null;
-  }
-
-  cameraModalEl.addEventListener('shown.bs.modal', async () => {
-    try { await startCamera(); }
-    catch (e) { alert('Camera access was blocked.'); }
-  });
-  if (closeBtn) closeBtn.onclick = null;
-
-  cameraModalEl.addEventListener('hidden.bs.modal', () => {
-    stopCamera();
-  });try { await startCamera(e.target.value); } catch(e){};
-
-  // Ensure open button uses data attributes (already set server-side)
-  const openBtn = document.getElementById('openCamera');
-  const closeBtn = document.getElementById('closeCam');
-  if (openBtn && !openBtn.dataset.bsTarget){
-    openBtn.onclick = null; // disable legacy handler
-    openBtn.setAttribute('data-bs-toggle','modal');
-    openBtn.setAttribute('data-bs-target','#cameraModal');
-  };
-</script>
 </body>
 </html>
