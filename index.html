@@ -919,6 +919,37 @@
 <div class="toast" id="toast"></div>
 
 <script>
+// ========================== Apps Script API over fetch =====================
+const BASE_URL = 'https://script.google.com/a/macros/fineart-restoration.co.uk/s/AKfycbyCe-vqX0H_3_Evrjmst3pg1tm1EUOnmYsBIaXRjuCdrCxTId2-RmPU4BTfwlG80XLi/exec';
+
+async function apiCall(action, payload = {}) {
+  const res = await fetch(BASE_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, ...payload })
+  });
+  const json = await res.json();
+  if (!res.ok || json.error) {
+    throw new Error(json.error || ('HTTP ' + res.status));
+  }
+  return json;
+}
+
+async function apiNewBatch(client, assessor) {
+  return await apiCall('newBatch', { client, assessor });
+}
+
+async function apiSaveItem(payload) {
+  return await apiCall('saveItem', { payload });
+}
+
+async function apiSavePhotos(batchId, itemId, photos) {
+  return await apiCall('savePhotos', { batchId, itemId, photos });
+}
+// ==========================================================================
+</script>
+
+<script>
 /* -------------------------------------------------
    JS helpers that must exist before we render
 --------------------------------------------------*/
